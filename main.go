@@ -1,8 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"image/color"
+	"image"
 	"image/png"
 	"log"
 	"os"
@@ -11,42 +12,37 @@ import (
 	"golang.org/x/image/draw"
 )
 
-const (
-	scale = 4
-)
-
-var (
-	pathSlice = []string{
-		// "/home/arc/go-projects/pixelart-to-grid/img/clubs.png",
-		// "/home/arc/go-projects/pixelart-to-grid/img/diamonds.png",
-		// "/home/arc/go-projects/pixelart-to-grid/img/hearts.png",
-		// "/home/arc/go-projects/pixelart-to-grid/img/spades.png",
-		"./img/milk.png",
-	}
-	colorCount = make(map[color.Color]int)
-	mu         sync.Mutex
-)
-
 func main() {
 	var wg sync.WaitGroup
+
+	cfg := NewConfig()
+	flag.Parse()
+	pathSlice := ParsePath(cfg.inputPath)
 
 	for i, path := range pathSlice {
 		wg.Add(1)
 		go func(id int, p string) {
 			defer wg.Done()
 
-			img, err := NewPixelImage(p)
+			f := OpenFile(path)
+			defer f.Close()
+
+			img, _, err := image.Decode(f)
 			checkError(err)
 
-			fmt.Println(p, img)
-			resizedImg := Resize(img, draw.NearestNeighbor)
+			if cfg.scale != 0 {
+				img = Resize(img, draw.NearestNeighbor, cfg.scale)
+			}
+			pixelImage := NewPixelImage(img)
 
-			DrawGrid(resizedImg)
+			grid := pixelImage.DrawGrid(cfg.cellSize)
 
-			res := DrawNums(resizedImg, img.GetColorSet())
+			res := DrawNums(grid, pixelImage.GetColors(), cfg.cellSize)
 
-			outPath := fmt.Sprintf("./out/%d.png", i)
-			out, err := os.Create(outPath)
+			outDir := "./out/"
+			outName := fmt.Sprintf("schema-%s", ParseName(path))
+
+			out, err := os.Create(outDir + outName)
 			checkError(err)
 			defer out.Close()
 
@@ -56,8 +52,12 @@ func main() {
 	}
 
 	wg.Wait()
+}
 
-	fmt.Println(colorCount)
+func OpenFile(path string) *os.File {
+	f, err := os.Open(path)
+	checkError(err)
+	return f
 }
 
 func checkError(err error) {
