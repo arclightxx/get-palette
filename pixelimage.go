@@ -53,7 +53,7 @@ func (pi *PixelImage) fillColorCountKeys() {
 }
 
 func (pi *PixelImage) GetColors() []color.RGBA {
-	colors := make([]color.RGBA, len(pi.colorCount))
+	colors := make([]color.RGBA, 0, len(pi.colorCount))
 
 	for k := range pi.colorCount {
 		colors = append(colors, k)
@@ -62,8 +62,10 @@ func (pi *PixelImage) GetColors() []color.RGBA {
 	sort.Slice(colors, func(i, j int) bool {
 		li := 0.299*float64(colors[i].R) + 0.587*float64(colors[i].G) + 0.114*float64(colors[i].B)
 		lj := 0.299*float64(colors[j].R) + 0.587*float64(colors[j].G) + 0.114*float64(colors[j].B)
-		return li < lj
+		return li > lj
 	})
+
+	fmt.Println(colors)
 
 	return colors
 }
