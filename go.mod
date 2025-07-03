@@ -1,4 +1,4 @@
-module github.com/arclightxx/pixelart-to-grid
+module github.com/arclightxx/getpalette
 
 go 1.24.4
 
