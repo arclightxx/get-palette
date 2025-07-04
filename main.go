@@ -19,9 +19,9 @@ func main() {
 	flag.Parse()
 	pathSlice := ParsePath(cfg.inputPath)
 
-	for i, path := range pathSlice {
+	for _, path := range pathSlice {
 		wg.Add(1)
-		go func(id int, p string) {
+		go func(p string) {
 			defer wg.Done()
 
 			f := OpenFile(path)
@@ -48,7 +48,7 @@ func main() {
 
 			err = png.Encode(out, res)
 			checkError(err)
-		}(i, path)
+		}(path)
 	}
 
 	wg.Wait()
