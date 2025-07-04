@@ -15,10 +15,10 @@ func ParseName(s string) string {
 	index := 0
 	for i := len(runes) - 1; i > 0; i-- {
 		if runes[i] == '/' {
-			index = i
+			index = i + 1
 			break
 		}
 	}
 
-	return s[index+1:]
+	return s[index:]
 }
