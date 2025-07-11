@@ -1,18 +1,24 @@
-package main
+package services
 
 import (
 	"fmt"
 	"image"
 
+	"github.com/arclightxx/getpalette/errors"
 	"golang.org/x/image/draw"
+)
+
+const (
+	minW = 32
+	maxW = 1980
 )
 
 func Resize(src image.Image, interpolator draw.Interpolator, scale int) *image.RGBA {
 	srcRect := src.Bounds()
 	scaledW, err := applyScale(src.Bounds().Dx(), scale)
-	checkError(err)
+	errors.CheckError(err)
 	scaledH, err := applyScale(srcRect.Dy(), scale)
-	checkError(err)
+	errors.CheckError(err)
 	dstImg := image.NewRGBA(image.Rect(0, 0, scaledW, scaledH))
 	dstRect := dstImg.Bounds()
 

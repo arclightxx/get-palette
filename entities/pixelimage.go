@@ -1,4 +1,4 @@
-package main
+package entities
 
 import (
 	"fmt"
@@ -11,6 +11,7 @@ import (
 
 	_ "image/png"
 
+	"github.com/arclightxx/getpalette/errors"
 	"github.com/fogleman/gg"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/gofont/gomedium"
@@ -20,16 +21,20 @@ import (
 type PixelImage struct {
 	mu sync.Mutex
 
-	image.Image
+	*image.RGBA
 	colorCount map[color.RGBA]int
+	width      int
+	height     int
 }
 
-func NewPixelImage(src image.Image) *PixelImage {
+func NewPixelImage(src *image.RGBA) *PixelImage {
 	colorCount := make(map[color.RGBA]int)
 	pi := &PixelImage{
 		sync.Mutex{},
 		src,
 		colorCount,
+		src.Bounds().Dx(),
+		src.Bounds().Dy(),
 	}
 	pi.fillColorCountKeys()
 
@@ -37,7 +42,7 @@ func NewPixelImage(src image.Image) *PixelImage {
 }
 
 func (pi *PixelImage) fillColorCountKeys() {
-	img := pi.Image
+	img := pi.RGBA
 
 	for y := range img.Bounds().Dy() {
 		for x := range img.Bounds().Dx() {
@@ -60,8 +65,8 @@ func (pi *PixelImage) GetColors() []color.RGBA {
 	}
 
 	sort.Slice(colors, func(i, j int) bool {
-		li := 0.299*float64(colors[i].R) + 0.587*float64(colors[i].G) + 0.114*float64(colors[i].B)
-		lj := 0.299*float64(colors[j].R) + 0.587*float64(colors[j].G) + 0.114*float64(colors[j].B)
+		li := colors[i].R + colors[i].G + colors[i].B
+		lj := colors[j].R + colors[j].G + colors[j].B
 		return li > lj
 	})
 
@@ -76,47 +81,37 @@ func (pi *PixelImage) IncrementColorCount(c color.RGBA) {
 	pi.mu.Unlock()
 }
 
-func (pi *PixelImage) DrawGrid(cellSize int) draw.Image {
-	bounds := pi.Image.Bounds()
-	result := image.NewRGBA(bounds)
-
-	draw.Draw(result, bounds, pi.Image, bounds.Min, draw.Src)
-
-	width, height := bounds.Dx(), bounds.Dy()
-
-	for x := 0; x < width; x += cellSize {
-		for y := range height {
-			result.Set(x, y, color.Black)
+func (pi *PixelImage) DrawGrid(cellSize int) {
+	for x := 0; x < pi.width; x += cellSize {
+		for y := range pi.height {
+			pi.RGBA.Set(x, y, color.Black)
 		}
 	}
 
-	for y := 0; y < height; y += cellSize {
-		for x := range width {
-			result.Set(x, y, color.Black)
+	for y := 0; y < pi.height; y += cellSize {
+		for x := range pi.width {
+			pi.RGBA.Set(x, y, color.Black)
 		}
 	}
-
-	return result
 }
 
-func DrawNums(src draw.Image, colors []color.RGBA, cellSize int) image.Image {
+func (pi *PixelImage) DrawNums(src draw.Image, colors []color.RGBA, cellSize int) image.Image {
 	dc := gg.NewContextForImage(src)
 	palette := getColorPalette(colors)
 
 	f, err := opentype.Parse(gomedium.TTF)
-	checkError(err)
+	errors.CheckError(err)
 
 	face, err := opentype.NewFace(f, &opentype.FaceOptions{
 		Size:    float64(cellSize) * 0.5,
 		DPI:     72,
 		Hinting: font.HintingFull,
 	})
-	checkError(err)
+	errors.CheckError(err)
 	dc.SetFontFace(face)
 
-	width, height := src.Bounds().Dx(), src.Bounds().Dy()
-	for y := 0; y < height; y += cellSize {
-		for x := 0; x < width; x += cellSize {
+	for y := 0; y < pi.height; y += cellSize {
+		for x := 0; x < pi.width; x += cellSize {
 			cx, cy := x+cellSize/2, y+cellSize/2
 
 			currColor := src.At(cx, cy)
