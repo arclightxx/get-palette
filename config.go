@@ -2,11 +2,6 @@ package main
 
 import "flag"
 
-const (
-	minW = 32
-	maxW = 1980
-)
-
 type Config struct {
 	inputPath     string
 	outputPath    string
