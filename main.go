@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"image"
 	"image/png"
-	"log"
 	"os"
 	"sync"
 
+	"github.com/arclightxx/getpalette/entities"
+	"github.com/arclightxx/getpalette/errors"
+	"github.com/arclightxx/getpalette/services"
 	"golang.org/x/image/draw"
 )
 
@@ -17,7 +19,7 @@ func main() {
 
 	cfg := NewConfig()
 	flag.Parse()
-	pathSlice := ParsePath(cfg.inputPath)
+	pathSlice := services.ParsePath(cfg.inputPath)
 
 	for _, path := range pathSlice {
 		wg.Add(1)
@@ -28,26 +30,28 @@ func main() {
 			defer f.Close()
 
 			img, _, err := image.Decode(f)
-			checkError(err)
+			errors.CheckError(err)
+			rgba := image.NewRGBA(img.Bounds())
+			draw.Draw(rgba, img.Bounds(), img, img.Bounds().Min, draw.Src)
 
 			if cfg.scale != 0 {
-				img = Resize(img, draw.NearestNeighbor, cfg.scale)
+				rgba = services.Resize(img, draw.NearestNeighbor, cfg.scale)
 			}
-			pixelImage := NewPixelImage(img)
+			pixelImage := entities.NewPixelImage(rgba)
 
-			grid := pixelImage.DrawGrid(cfg.cellSize)
+			pixelImage.DrawGrid(cfg.cellSize)
 
-			res := DrawNums(grid, pixelImage.GetColors(), cfg.cellSize)
+			pixelImage.DrawNums(cfg.cellSize)
 
 			outDir := "./out/"
-			outName := fmt.Sprintf("schema-%s", ParseName(path))
+			outName := fmt.Sprintf("schema-%s", services.ParseName(path))
 
 			out, err := os.Create(outDir + outName)
-			checkError(err)
+			errors.CheckError(err)
 			defer out.Close()
 
-			err = png.Encode(out, res)
-			checkError(err)
+			err = png.Encode(out, pixelImage)
+			errors.CheckError(err)
 		}(path)
 	}
 
@@ -56,12 +60,6 @@ func main() {
 
 func OpenFile(path string) *os.File {
 	f, err := os.Open(path)
-	checkError(err)
+	errors.CheckError(err)
 	return f
-}
-
-func checkError(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
 }

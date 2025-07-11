@@ -95,9 +95,9 @@ func (pi *PixelImage) DrawGrid(cellSize int) {
 	}
 }
 
-func (pi *PixelImage) DrawNums(src draw.Image, colors []color.RGBA, cellSize int) image.Image {
-	dc := gg.NewContextForImage(src)
-	palette := getColorPalette(colors)
+func (pi *PixelImage) DrawNums(cellSize int) {
+	dc := gg.NewContextForImage(pi.RGBA)
+	palette := getColorPalette(pi.GetColors())
 
 	f, err := opentype.Parse(gomedium.TTF)
 	errors.CheckError(err)
@@ -114,7 +114,7 @@ func (pi *PixelImage) DrawNums(src draw.Image, colors []color.RGBA, cellSize int
 		for x := 0; x < pi.width; x += cellSize {
 			cx, cy := x+cellSize/2, y+cellSize/2
 
-			currColor := src.At(cx, cy)
+			currColor := pi.RGBA.At(cx, cy)
 			paletteIndex := palette.Index(currColor)
 
 			r, g, b, _ := currColor.RGBA()
@@ -132,7 +132,7 @@ func (pi *PixelImage) DrawNums(src draw.Image, colors []color.RGBA, cellSize int
 		}
 	}
 
-	return dc.Image()
+	draw.Draw(pi.RGBA, pi.Bounds(), dc.Image(), pi.Bounds().Min, draw.Src)
 }
 
 func getColorPalette(colors []color.RGBA) color.Palette {
